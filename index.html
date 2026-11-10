@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Path Traversal na prática</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📂</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1230; --panel:#141a40; --line:#2a3270; --text:#eef0ff; --mut:#9aa3d6;
+  --hot:#ff4f8b; --ok:#5ef0c0; --warn:#ffc857;
+  --sans:'Bricolage Grotesque',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font:17px/1.65 var(--sans);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:48px 48px;background-attachment:fixed;background-blend-mode:soft-light}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse at 20% 0%,transparent,var(--bg) 75%);pointer-events:none;z-index:-1}
+main{max-width:1040px;margin:0 auto;padding:0 22px}
+section{padding:72px 0 8px}
+h1,h2,h3{font-weight:800;line-height:1.05;letter-spacing:-.02em}
+h2{font-size:clamp(28px,4.5vw,44px);margin-bottom:18px}
+p{max-width:64ch;color:var(--mut)}
+p b,li b{color:var(--text)}
+code,pre,.mono{font-family:var(--mono)}
+code{background:#1d2557;padding:2px 7px;border-radius:5px;font-size:.88em;color:var(--hot)}
+
+.hero{padding:90px 0 40px}
+.hero .big{font-family:var(--mono);font-weight:500;font-size:clamp(64px,17vw,190px);line-height:.9;color:var(--hot);letter-spacing:-.06em;margin-left:-.04em}
+.hero h1{font-size:clamp(34px,6vw,64px);margin:16px 0 18px;max-width:14ch}
+.hero p{font-size:19px}
+.cta{display:inline-block;margin-top:26px;background:var(--hot);color:#1a0610;font-weight:700;padding:13px 24px;border-radius:999px;text-decoration:none}
+.cta:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--ok);outline-offset:3px}
+
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:34px;margin-top:26px}
+.cols h3{font-size:22px;margin-bottom:8px}
+.sev{border-left:4px solid var(--warn);padding:2px 0 2px 16px;margin-top:26px;max-width:64ch}
+
+/* lab */
+.lab{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:22px}
+.modes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.modes button{font:500 14px var(--mono);background:transparent;color:var(--mut);border:1px solid var(--line);border-radius:10px;padding:9px 14px;cursor:pointer}
+.modes button[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.modes button[data-m=safe][aria-pressed=true]{background:var(--ok);border-color:var(--ok)}
+.modes button[data-m=vuln][aria-pressed=true]{background:var(--hot);border-color:var(--hot);color:#1a0610}
+.url{display:flex;align-items:center;background:#0a0e26;border:1px solid var(--line);border-radius:12px;padding:0 6px 0 14px;font:15px var(--mono)}
+.url span{color:var(--mut);white-space:nowrap}
+.url input{flex:1;min-width:0;background:none;border:0;color:var(--text);font:inherit;padding:14px 8px}
+.url button{background:var(--text);color:var(--bg);border:0;border-radius:8px;font:600 14px var(--mono);padding:9px 16px;cursor:pointer}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.chips small{width:100%;color:var(--mut);font-size:14px}
+.chips button{font:13px var(--mono);background:#1d2557;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+.chips button.atk{color:var(--hot);border-color:#6b2a4a}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.box{background:#0a0e26;border:1px solid var(--line);border-radius:12px;padding:16px;min-height:200px;overflow:auto}
+.box h4{font:500 13px var(--sans);color:var(--mut);margin-bottom:10px}
+.steps{font:14px/1.9 var(--mono);list-style:none;padding:0}
+.steps span{color:var(--mut);display:inline-block;width:104px}
+#out{font:14px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word}
+.bad{color:var(--hot)} .good{color:var(--ok)} .leak{color:var(--warn)}
+.verdict{margin-top:12px;font:600 14px var(--mono)}
+
+/* code */
+pre{background:#0a0e26;border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto;font-size:14px;line-height:1.7;color:#d8dcff}
+.k{color:#c792ea}.s{color:var(--ok)}.c{color:#6c75b3}.r{color:var(--hot)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-top:20px}
+.two h3{font-size:18px;margin-bottom:8px}
+ul.list{margin:18px 0 0 20px;color:var(--mut);max-width:64ch}
+ul.list li{margin-bottom:8px}
+footer{padding:70px 0 50px;color:var(--mut);font-size:14px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<main>
+
+<header class="hero">
+  <div class="big" aria-hidden="true">../</div>
+  <h1>Path traversal na prática</h1>
+  <p>Um parâmetro de arquivo mal validado deixa qualquer pessoa sair da pasta pública e ler o que o servidor guarda de mais sensível. Neste site você explora a falha em um laboratório simulado e depois liga a correção.</p>
+  <a class="cta" href="#lab">Ir para o laboratório</a>
+</header>
+
+<section id="lab">
+  <h2>Laboratório</h2>
+  <p>O servidor fictício serve arquivos de <code>/var/www/app/public</code>. Escolha o modo de proteção, digite um nome de arquivo e veja como o caminho é resolvido.</p>
+
+  <div class="lab">
+    <div class="modes" role="group" aria-label="Modo do servidor">
+      <button data-m="vuln" aria-pressed="true">1 · sem proteção</button>
+      <button data-m="naive" aria-pressed="false">2 · filtro ingênuo</button>
+      <button data-m="safe" aria-pressed="false">3 · corrigido</button>
+    </div>
+
+    <div class="url"><span>GET /download.php?file=</span><input id="inp" value="welcome.txt" aria-label="Valor do parâmetro file" autocomplete="off" spellcheck="false"><button id="go">Enviar</button></div>
+
+    <div class="chips">
+      <small>Arquivos públicos</small>
+      <button data-p="welcome.txt">welcome.txt</button>
+      <button data-p="sobre.txt">sobre.txt</button>
+      <small>Payloads para testar</small>
+      <button class="atk" data-p="../.env">../.env</button>
+      <button class="atk" data-p="../../../../etc/passwd">../../../../etc/passwd</button>
+      <button class="atk" data-p="../app.log">../app.log</button>
+      <button class="atk" data-p="%2e%2e%2f.env">%2e%2e%2f.env</button>
+      <button class="atk" data-p="....//.env">....//.env</button>
+      <small>Sem traversal: o .env também pode estar exposto direto na raiz web</small>
+      <button class="atk" id="direct">GET /.env</button>
+      <label style="font:13px var(--mono);color:var(--mut);display:flex;align-items:center;gap:6px"><input type="checkbox" id="blk"> bloquear dotfiles no servidor</label>
+    </div>
+
+    <div class="grid">
+      <div class="box"><h4>O que o servidor faz</h4><ol class="steps" id="steps"></ol><div class="verdict" id="verdict"></div></div>
+      <div class="box"><h4>Resposta HTTP</h4><div id="out"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="codigo">
+  <h2>O código por trás</h2>
+  <p>O laboratório imita em JavaScript o que estes trechos de PHP fazem no servidor.</p>
+  <div class="two">
+    <div><h3>Vulnerável</h3>
+<pre><span class="k">$base</span> = __DIR__ . <span class="s">'/public'</span>;
+<span class="c">// concatena a entrada sem validar</span>
+<span class="k">$path</span> = $base . <span class="s">'/'</span> . <span class="r">$_GET['file']</span>;
+readfile($path);</pre></div>
+    <div><h3>Filtro ingênuo (também falha)</h3>
+<pre><span class="k">$file</span> = str_replace(<span class="s">'../'</span>, <span class="s">''</span>, $file);
+<span class="c">// "....//" vira "../" depois do filtro</span>
+<span class="k">$file</span> = urldecode($file);
+<span class="c">// "%2e%2e%2f" passa e é decodificado depois</span></pre></div>
+  </div>
+  <div class="two">
+    <div><h3>Corrigido</h3>
+<pre><span class="k">$root</span> = realpath($base);
+<span class="k">$path</span> = realpath($base . <span class="s">'/'</span> . $file);
+<span class="c">// o caminho real precisa continuar dentro de public/</span>
+<span class="k">if</span> ($path === <span class="k">false</span> ||
+    strpos($path, $root . DIRECTORY_SEPARATOR) !== 0) {
+  http_response_code(403); exit;
+}</pre></div>
+    <div><h3>Defesa em camadas</h3>
+      <ul class="list">
+        <li><b>Resolva e confira:</b> use <code>realpath()</code> e compare com a pasta base.</li>
+        <li><b>Lista de permissão:</b> aceite IDs ou nomes conhecidos, não caminhos.</li>
+        <li><b>Segredos fora da raiz web:</b> corrigir o traversal não protege um <code>.env</code> servido direto. Bloqueie dotfiles e mantenha-o fora da pasta pública.</li>
+        <li><b>Menor privilégio:</b> o PHP não precisa ler <code>/etc</code> nem o <code>.env</code> da aplicação.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const BASE = '/var/www/app/public';
+const FS = {
+  '/var/www/app/public/welcome.txt': 'Bem-vindo ao portal de documentos.\nEste arquivo é público.',
+  '/var/www/app/public/sobre.txt': 'Empresa Exemplo S.A.\nContato: contato@exemplo.com',
+  '/var/www/app/.env': '# DADOS FICTÍCIOS\nAPP_ENV=production\nDB_HOST=10.0.0.12\nDB_USER=admin\nDB_PASS=Sup3rS3cr3t!\nJWT_SECRET=a8f5f167f44f4964e6c998dee827110c\nAWS_SECRET_ACCESS_KEY=chave-ficticia-nao-e-real',
+  '/etc/passwd': 'root:x:0:0:root:/root:/bin/bash\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\nadmin:x:1000:1000::/home/admin:/bin/bash',
+  '/var/www/app/app.log': '[09:12:01] login ok user=maria\n[09:14:37] login falhou user=admin ip=203.0.113.7\n[09:15:02] token emitido user=joao'
+};
+const $ = id => document.getElementById(id);
+let mode = 'vuln';
+
+const norm = p => {
+  const out = [];
+  for (const s of p.split('/')) {
+    if (s === '' || s === '.') continue;
+    if (s === '..') out.pop(); else out.push(s);
+  }
+  return '/' + out.join('/');
+};
+const dec = s => { try { return decodeURIComponent(s); } catch { return s; } };
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function run() {
+  const raw = $('inp').value;
+  const steps = []; let input = raw, blocked = false, why = '';
+  steps.push(['entrada', esc(raw)]);
+
+  if (mode === 'naive') {
+    input = raw.replaceAll('../', '');
+    steps.push(['após filtro', esc(input) + ' <span class="c">(str_replace remove todos os "../" em uma passada)</span>']);
+  }
+  if (mode !== 'safe') input = dec(input);       // servidor decodifica a URL
+  else input = dec(raw);
+  if (input !== raw && mode !== 'naive') steps.push(['decodificado', esc(input)]);
+  if (mode === 'naive' && input !== raw.replaceAll('../','')) steps.push(['decodificado', esc(input)]);
+
+  const joined = BASE + '/' + input;
+  steps.push(['concatenado', esc(joined)]);
+  const full = norm(joined);
+  steps.push(['resolvido', esc(full)]);
+
+  const inside = full.startsWith(BASE + '/');
+  if (mode === 'safe') {
+    steps.push(['dentro da base?', inside ? '<span class="good">sim</span>' : '<span class="bad">não</span>']);
+    if (!inside) { blocked = true; why = 'Caminho fora de ' + BASE; }
+  }
+
+  $('steps').innerHTML = steps.map(s => `<li><span>${s[0]}</span>${s[1]}</li>`).join('');
+  const v = $('verdict'), out = $('out');
+  if (blocked) {
+    v.innerHTML = '<span class="good">✔ Ataque bloqueado</span>';
+    out.innerHTML = '<span class="good">403 Forbidden</span>\n' + esc(why);
+    return;
+  }
+  if (FS[full] !== undefined) {
+    const leaked = !inside;
+    v.innerHTML = leaked ? '<span class="bad">✘ Arquivo fora da pasta pública foi exposto</span>' : '<span class="good">Arquivo público servido normalmente</span>';
+    out.innerHTML = '<span class="' + (leaked ? 'leak' : 'good') + '">200 OK</span>\n\n' + esc(FS[full]);
+  } else {
+    v.innerHTML = inside ? '' : '<span class="leak">Saiu da pasta pública, mas o arquivo não existe</span>';
+    out.innerHTML = '<span class="bad">404 Not Found</span>\n' + esc(full);
+  }
+}
+
+$('direct').onclick = () => {
+  const blocked = $('blk').checked;
+  $('steps').innerHTML = '<li><span>entrada</span>GET /.env</li><li><span>resolvido</span>/var/www/app/.env</li><li><span>acesso direto</span>' + (blocked ? '<span class="good">bloqueado pelo servidor</span>' : '<span class="bad">servido como arquivo estático</span>') + '</li>';
+  $('verdict').innerHTML = blocked ? '<span class="good">✔ Dotfile bloqueado</span>' : '<span class="bad">✘ .env exposto sem nenhum traversal</span>';
+  $('out').innerHTML = blocked ? '<span class="good">403 Forbidden</span>' : '<span class="leak">200 OK</span>\n\n' + esc(FS['/var/www/app/.env']);
+};
+document.querySelectorAll('.modes button').forEach(b => b.onclick = () => {
+  mode = b.dataset.m;
+  document.querySelectorAll('.modes button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  run();
+});
+document.querySelectorAll('.chips button[data-p]').forEach(b => b.onclick = () => { $('inp').value = b.dataset.p; run(); });
+$('go').onclick = run;
+$('inp').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+run();
+</script>
+</body>
+</html>
