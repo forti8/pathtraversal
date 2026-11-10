@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caça à flag — Portal Interno</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍫</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1230; --panel:#141a40; --line:#2a3270; --text:#eef0ff; --mut:#9aa3d6;
+  --hot:#ff4f8b; --ok:#5ef0c0; --warn:#ffc857;
+  --sans:'Bricolage Grotesque',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --corp-bg:#f4f5f8; --corp-panel:#ffffff; --corp-line:#dcdfe6; --corp-text:#1d2233; --corp-mut:#6b7185; --corp-accent:#2f5dff;
+  --corp-sans:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font:17px/1.65 var(--sans);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:48px 48px;background-attachment:fixed;background-blend-mode:soft-light}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse at 20% 0%,transparent,var(--bg) 75%);pointer-events:none;z-index:-1}
+main{max-width:980px;margin:0 auto;padding:0 22px 90px}
+section{padding:60px 0 8px}
+h1,h2,h3{font-weight:800;line-height:1.05;letter-spacing:-.02em}
+h2{font-size:clamp(26px,4vw,38px);margin-bottom:16px}
+p{max-width:64ch;color:var(--mut)}
+p b,li b{color:var(--text)}
+code{font-family:var(--mono);background:#1d2557;padding:2px 7px;border-radius:5px;font-size:.88em;color:var(--hot)}
+
+/* briefing hero */
+.hero{padding:80px 0 20px;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:center}
+@media(max-width:760px){.hero{grid-template-columns:1fr}}
+.hero .tag{font:600 14px var(--mono);color:var(--hot)}
+.hero h1{font-size:clamp(32px,5.4vw,52px);margin:10px 0 16px;max-width:13ch}
+.hero p{font-size:18px}
+.prize-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.prize-wrap svg{width:100%;max-width:240px;filter:drop-shadow(0 18px 34px rgba(0,0,0,.45))}
+.ribbon{font:800 15px var(--sans);color:#1a0610;background:var(--warn);padding:8px 18px;border-radius:999px;transform:rotate(-3deg)}
+
+.rules{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;margin-top:10px}
+.rules h3{font-size:19px;margin-bottom:14px}
+.rules ul{list-style:none;display:grid;gap:11px}
+.rules li{display:flex;gap:11px;color:var(--text);font-size:15.5px}
+.rules li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--hot);margin-top:9px;flex:none}
+.rules .meta{display:flex;gap:22px;margin-top:20px;flex-wrap:wrap;font:500 14px var(--mono);color:var(--mut)}
+.rules .meta b{color:var(--ok)}
+
+/* divider into target app */
+.into{text-align:center;padding:64px 0 10px}
+.into .arrow{font-size:30px;color:var(--hot)}
+.into p{margin:10px auto 0;max-width:52ch}
+
+/* the fake corporate target, styled deliberately different (it's the "real world" app) */
+.browser{background:var(--corp-panel);border-radius:16px;overflow:hidden;border:1px solid var(--corp-line);box-shadow:0 30px 60px rgba(0,0,0,.35);margin-top:28px}
+.browser .bar{background:#e7e9ef;padding:11px 16px;display:flex;align-items:center;gap:8px}
+.browser .dot{width:10px;height:10px;border-radius:50%}
+.browser .addr{flex:1;margin-left:10px;background:#fff;border:1px solid var(--corp-line);border-radius:7px;padding:6px 12px;font:13px var(--mono);color:var(--corp-mut)}
+.app{background:var(--corp-bg);color:var(--corp-text);font-family:var(--corp-sans);padding:30px 32px 36px}
+.app-head{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.app-head .logo{width:34px;height:34px;border-radius:9px;background:var(--corp-accent)}
+.app-head b{font-size:17px}
+.app-head span{color:var(--corp-mut);font-size:13px}
+.doclist{display:grid;gap:8px;margin-bottom:26px}
+.doclist a{display:flex;justify-content:space-between;background:#fff;border:1px solid var(--corp-line);border-radius:10px;padding:12px 14px;text-decoration:none;color:var(--corp-text);font-size:14.5px}
+.doclist a span{color:var(--corp-mut);font:12px var(--mono)}
+.panel{background:#fff;border:1px solid var(--corp-line);border-radius:12px;padding:20px}
+.panel label{display:block;font:600 13px var(--corp-sans);color:var(--corp-mut);margin-bottom:8px}
+.reqrow{display:flex;gap:8px}
+.reqrow .pre{display:flex;align-items:center;background:#eef0f5;border:1px solid var(--corp-line);border-left:none;border-radius:8px 0 0 8px;padding:0 10px;font:13px var(--mono);color:var(--corp-mut)}
+.reqrow input{flex:1;border:1px solid var(--corp-line);border-left:none;padding:12px 10px;font:14px var(--mono);min-width:0}
+.reqrow button{background:var(--corp-accent);color:#fff;border:0;border-radius:0 8px 8px 0;padding:0 18px;font:600 14px var(--corp-sans);cursor:pointer}
+.reqrow input:focus-visible,.reqrow button:focus-visible,.doclist a:focus-visible{outline:3px solid #2f5dff55;outline-offset:2px}
+#resp{margin-top:18px;background:#0f1324;border-radius:10px;padding:16px;font:13.5px/1.6 var(--mono);color:#dfe3ff;white-space:pre-wrap;word-break:break-word;min-height:54px}
+.status{display:inline-block;padding:3px 10px;border-radius:6px;font:700 12px var(--mono);margin-bottom:10px}
+.s200{background:#153a2c;color:#5ef0c0}.s403{background:#3a1530;color:#ff8fc0}.s404{background:#3a2d15;color:#ffc857}
+
+footer{padding:60px 0 10px;color:var(--mut);font-size:13.5px;text-align:center}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<main>
+
+<header class="hero">
+  <div>
+    <div class="tag">// exercício prático</div>
+    <h1>Caça à flag: path traversal</h1>
+    <p>Lá embaixo tem um portal de documentos como qualquer outro. Ele tem uma falha. Encontre, explore, e descubra a frase secreta escondida no servidor.</p>
+  </div>
+  <div class="prize-wrap">
+    <div class="ribbon">ESTÁ VALENDO UM BIS 🍫</div>
+  </div>
+</header>
+
+<section>
+  <div class="rules">
+    <h3>Como funciona</h3>
+    <ul>
+      <li>O <b>Portal Interno</b> logo abaixo é o alvo. Em algum lugar dele existe uma falha de path traversal.</li>
+      <li>Em algum arquivo do servidor está uma <b>frase secreta</b>. Encontre a falha, explore, e leia a frase.</li>
+      <li>Quem achar primeiro, levanta a mão e <b>fala a frase em voz alta</b> para confirmar. Não grite a resposta pro grupo antes disso.</li>
+    </ul>
+    <div class="meta"><span>Dificuldade: <b>média</b></span><span>Tempo sugerido: <b>10–15 min</b></span><span>Prêmio: <b>1 Bis</b></span></div>
+  </div>
+</section>
+
+<div class="into">
+  <div class="arrow">↓</div>
+  <p>A partir daqui é o alvo. Finja que é um site qualquer da empresa — porque é exatamente assim que ele deveria parecer.</p>
+</div>
+
+<div class="browser">
+  <div class="bar">
+    <div class="dot" style="background:#ff5f56"></div><div class="dot" style="background:#ffbd2e"></div><div class="dot" style="background:#27c93f"></div>
+    <div class="addr">portal-interno.exemplo.com.br</div>
+  </div>
+  <div class="app">
+    <div class="app-head"><div class="logo"></div><div><b>Portal Interno</b><br><span>Documentos do time</span></div></div>
+
+    <div class="doclist">
+      <a href="#" data-f="boas-vindas.txt">Boas-vindas ao time <span>.txt</span></a>
+      <a href="#" data-f="manual.txt">Manual do colaborador <span>.txt</span></a>
+      <a href="#" data-f="comunicado-ti.txt">Comunicado de TI <span>.txt</span></a>
+    </div>
+
+    <div class="panel">
+      <label for="f">Baixar documento</label>
+      <div class="reqrow">
+        <div class="pre">/download.php?file=</div>
+        <input id="f" value="boas-vindas.txt" autocomplete="off" spellcheck="false" aria-label="nome do arquivo">
+        <button id="go">Baixar</button>
+      </div>
+      <div id="resp"></div>
+    </div>
+  </div>
+</div>
+
+<footer>Ambiente fictício, feito só para este exercício. Nenhum dado aqui é real.</footer>
+</main>
+
+<script src="script.js" type="module"></script>
+</body>
+</html>
